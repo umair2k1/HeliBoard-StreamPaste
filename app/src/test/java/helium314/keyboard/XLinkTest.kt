@@ -86,6 +86,7 @@ class XLinkTest { // Without the X, SubtypeTests fail with ClassCastException. W
     private fun checkWikiLink(link: String) {
         if (link.contains("umair2k1", true)) return
         val url = URL(link)
+        val connection = url.openConnection() as HttpURLConnection
         if (connection.responseCode != 200)
             println("error checking $link")
         assertEquals(200, connection.responseCode)
