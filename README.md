@@ -1,139 +1,123 @@
-# HeliBoard
-HeliBoard is a privacy-conscious and customizable open-source keyboard, based on AOSP / OpenBoard.
-Does not use internet permission, and thus is 100% offline.
+# HeliBoard - MegaPaste
 
-[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80">](https://f-droid.org/packages/helium314.keyboard/)
-[<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get APK from GitHub" height="80">](https://github.com/HeliBorg/HeliBoard/releases/latest)
-[<img src="https://gitlab.com/IzzyOnDroid/repo/-/raw/master/assets/IzzyOnDroid.png" alt="Get it on IzzyOnDroid" height="80">](https://apt.izzysoft.de/fdroid/index/apk/helium314.keyboard)
+> A specialized fork of [HeliBoard](https://github.com/HeliBorg/HeliBoard) engineered for **MegaPaste (Stream Paste)** — reliably paste massive text files and multi-megabyte payloads into any Android app without clipboard freezes, IPC limits, or system crashes.
+
+HeliBoard-MegaPaste is 100% offline, privacy-conscious, and requires **no internet permission**.
+
+[<img src="https://user-images.githubusercontent.com/663460/26973090-f8fdc986-4d14-11e7-995a-e7c5e79ed925.png" alt="Get MegaPaste APK from GitHub" height="80">](https://github.com/umair2k1/HeliBoard-MegaPaste/releases)
+
+---
 
 ## Table of Contents
 
-- [Features](#features)
-- [Contributing](#contributing-)
-   * [Reporting Issues](#reporting-issues)
-   * [Translations](#translations)
-   * [To Community](#to-community)
-   * [Code Contribution](CONTRIBUTING.md)
-- [Links](#links)
-- [License](#license)
+- [Why HeliBoard-MegaPaste?](#why-heliboard-megapaste)
+  - [The Problem](#the-problem)
+  - [The Solution: MegaPaste (Stream Paste)](#the-solution-megapaste-stream-paste)
+- [How to Use Stream Paste](#how-to-use-stream-paste)
+- [Technical Highlights](#technical-highlights)
+- [Downloads](#downloads)
+- [Base HeliBoard Features](#base-heliboard-features)
+- [Contributing](#contributing)
+- [Upstream & License](#upstream--license)
 - [Credits](#credits)
-  * [Funding](#funding)
 
-# Features
+---
+
+## Why HeliBoard-MegaPaste?
+
+### The Problem
+On Android, attempting to copy and paste large bodies of text (such as source code files, database dumps, terminal logs, markdown documents, books, or large JSON/CSV payloads) often fails completely:
+- **Binder IPC limit (`TransactionTooLargeException`)**: Android clipboard transactions cannot exceed the ~1 MB system Binder buffer limit.
+- **System Clipboard Truncation / Crashes**: Many Android versions and clipboard managers silently truncate or crash when dealing with large payloads.
+- **Application Freezes (ANRs)**: Target apps usually choke or trigger ANR dialogs when attempting to process and render hundreds of thousands of characters in a single input frame.
+
+### The Solution: MegaPaste (Stream Paste)
+**HeliBoard-MegaPaste** introduces **Stream Paste** — a share-to-stage and chunked streaming architecture:
+1. **Share-to-Stage**: Instead of relying on the system clipboard, share text or text files directly to **"Stream Paste"** from any file manager, browser, or editor via Android's native share menu.
+2. **Off-Memory Atomic Cache**: Payloads are staged directly to an atomic on-disk cache without blowing up application memory or hitting Binder IPC constraints (supports up to **256 MB** payloads with disk-headroom safety checks).
+3. **Chunked Streaming Injection**: When you trigger Stream Paste, HeliBoard streams the text into the active field in paced, UTF-8-safe chunks (2,048 code points per chunk with surrogate-pair preservation and a 15ms interval) via the keyboard's input connection.
+4. **Live In-Keyboard Progress & Cancel**: A dedicated status strip replaces the suggestion bar during streaming, displaying live progress (percentage and KB transferred) with an immediate **Cancel** button.
+5. **Generational Auto-Cleanup**: Once pasted (or upon cancellation), the staged cache is safely discarded with generational safeguards preventing race conditions against newly staged shares.
+
+---
+
+## How to Use Stream Paste
+
+1. **Stage Your Text**:
+   - In any app (file manager, text editor, terminal, browser), select text or open a text file.
+   - Tap **Share** and select **Stream Paste** (HeliBoard). A toast will confirm your text has been staged.
+2. **Focus the Target Field**:
+   - Open the app where you want to paste the text (Termux, code editor, messaging app, notes, web form, etc.) and tap the input field so HeliBoard appears.
+3. **Trigger Stream Paste**:
+   - Tap the **Stream Paste** icon on HeliBoard's top toolbar.
+   - *Tip:* If the icon is not on your toolbar, you can enable it under **HeliBoard Settings → Preferences → Toolbar keys**.
+4. **Monitor or Cancel**:
+   - Watch the live progress percentage and KB counter on the toolbar.
+   - Tap **Cancel** at any time to halt the stream immediately.
+
+---
+
+## Technical Highlights
+
+- **Payload Capacity**: Up to 256 MB per staged payload, protected by a 64 MB minimum storage headroom check.
+- **Surrogate-Aware Chunking**: Chunks are split on Unicode code point boundaries (never splitting high/low UTF-16 surrogates), preventing corrupted characters or broken emojis.
+- **Paced Input Delivery**: 15ms delay between chunks ensures the recipient application can consume and render text without freezing the main thread.
+- **Atomic File Management**: Managed using Android's `AtomicFile` to prevent partially written or corrupted staged shares.
+- **Generational Tracking**: Prevents an earlier streaming paste from deleting a newer staged payload if another share was received.
+- **100% Offline & Private**: Zero internet permissions (`android.permission.INTERNET` is not declared or requested). All staging and streaming stays strictly local on your device.
+
+---
+
+## Downloads
+
+Pre-built debug APKs with MegaPaste enabled are built automatically on GitHub Actions and available on the [Releases](https://github.com/umair2k1/HeliBoard-MegaPaste/releases) page.
+
+---
+
+## Base HeliBoard Features
+
+HeliBoard-MegaPaste retains all the features of upstream HeliBoard:
 <ul>
-  <li>Add dictionaries for suggestions and spell check</li>
-  <ul>
-    <li>build your own, or get them  <a href="https://codeberg.org/Helium314/aosp-dictionaries#dictionaries">here</a> (quality may vary)</li>
-    <li>additional dictionaries for emojis or scientific symbols can be used to provide suggestions (similar to "emoji search")</li>
-    <li>note that for Korean layouts, suggestions only work using <a href="https://github.com/openboard-team/openboard/commit/83fca9533c03b9fecc009fc632577226bbd6301f">this dictionary</a>, the tools in the dictionary repository are not able to create working dictionaries</li>
-  </ul>
-  <li>Customize keyboard themes (style, colors and background image)</li>
-  <li>Emoji search (inline and separate, requires <a href="https://codeberg.org/Helium314/aosp-dictionaries">emoji dictionary</a>)</li>
-  <ul>
-    <li>can follow the system's day/night setting on Android 10+ (and on some versions of Android 9)</li>
-    <li>can follow dynamic colors for Android 12+</li>
-  </ul>
-  <li>Customize keyboard <a href="https://github.com/HeliBorg/HeliBoard/blob/main/layouts.md">layouts</a> (only available when disabling <i>use system languages</i>)</li>
-  <li>Customize special layouts, like symbols, number,  or functional key layout</li>
+  <li>Add dictionaries for suggestions and spell check (build your own or download community dictionaries)</li>
+  <li>Customize keyboard themes (style, colors, day/night mode, Android 12+ dynamic colors, custom background images)</li>
+  <li>Emoji search (inline and separate)</li>
+  <li>Fully customizable keyboard layouts (main layouts, symbols, number pad, functional keys)</li>
   <li>Multilingual typing</li>
-  <li>Glide typing (<i>only with closed source library</i> ☹️)</li>
-  <ul>
-    <li>library not included in the app, as there is no compatible open source library available</li>
-    <li>can be extracted from GApps packages ("<i>swypelibs</i>"), or downloaded <a href="https://github.com/erkserkserks/openboard/tree/46fdf2b550035ca69299ce312fa158e7ade36967/app/src/main/jniLibs">here</a> (click on the file and then "raw" or the tiny download button)</li>
-  </ul>
-  <li>Clipboard history</li>
-  <li>One-handed mode</li>
-  <li>Split keyboard</li>
-  <li>Number pad</li>
-  <li>Backup and restore your settings and learned word / history data</li>
+  <li>Glide / Gesture typing (compatible with optional swypelibs)</li>
+  <li>Local clipboard history</li>
+  <li>One-handed and split keyboard modes</li>
+  <li>Backup and restore of settings and learned words</li>
 </ul>
 
-For [FAQ](https://github.com/HeliBorg/HeliBoard/wiki/FAQ), [hidden features](https://github.com/HeliBorg/HeliBoard/wiki/9.-Hidden-features) and more information about the app and features, please visit the [wiki](https://github.com/HeliBorg/HeliBoard/wiki)
+For upstream FAQ, hidden features, and documentation, visit the [upstream HeliBoard wiki](https://github.com/HeliBorg/HeliBoard/wiki).
 
-# Contributing ❤
+---
 
-## Reporting Issues
+## Contributing
 
-Whether you encountered a bug, or want to see a new feature in HeliBoard, you can contribute to the project by opening a new issue [here](https://github.com/HeliBorg/HeliBoard/issues). Your help is always welcome!
+- **MegaPaste Issues & PRs**: For bugs, improvements, or feature requests relating to **MegaPaste / Stream Paste**, please open an issue or pull request in [this repository](https://github.com/umair2k1/HeliBoard-MegaPaste/issues).
+- **Core HeliBoard Issues**: For bugs, dictionaries, or feature requests regarding general HeliBoard functionality, please visit the [upstream repository](https://github.com/HeliBorg/HeliBoard).
 
-Before opening a new issue, be sure to check the following:
- - **Does the issue already exist?** Make sure a similar issue has not been reported by browsing [existing issues](https://github.com/HeliBorg/HeliBoard/issues?q=). Please search open and closed issues. In case of feature requests you could also check the [FAQ](https://github.com/HeliBorg/HeliBoard/wiki/FAQ) and [hidden features](https://github.com/HeliBorg/HeliBoard/wiki/9.-Hidden-features).
- - **Is the issue still relevant?** Make sure your issue is not already fixed in the latest version of HeliBoard.
- - **Is it a single topic?** If you want to suggest multiple things, open multiple issues.
- - **Did you use the issue template?** It is important to make life of our kind contributors easier by avoiding issues that miss key information to their resolution.
- - **Is it written by a human?** Do not use LLMs or similar to generate issues. Having LLMs help with translation or similar is acceptable, but must be disclosed. See also [AI_USAGE.md](AI_USAGE.md)
-Note that issues that that ignore part of the issue template will likely get treated with very low priority, as often they are needlessly hard to read or understand (e.g. huge screenshots, not providing a proper description, or addressing multiple topics). Blatant violation of the guidelines may result in the issue getting closed.
+---
 
-If you're interested, you can read the following useful text about effective bug reporting (a bit longer read): https://www.chiark.greenend.org.uk/~sgtatham/bugs.html
+## Upstream & License
 
-## Translations
-Translations can be added using [Weblate](https://translate.codeberg.org/projects/heliboard/). You will need an account to update translations and add languages. Add the language you want to translate to in Languages -> Manage translated languages in the top menu bar.
-Updating translations in a PR will not be accepted, as it may cause conflicts with Weblate translations.
+HeliBoard-MegaPaste is based on [HeliBoard](https://github.com/HeliBorg/HeliBoard) by [Helium314](https://github.com/Helium314) (which is a fork of OpenBoard / AOSP Keyboard).
 
-Some notes on translations
-* when translating metadata, translating the changelogs is rather useless. It's available as it was requested by translators.
-* the `hidden_features_message` is horrible to translate with Weblate, and serves little benefit as it's just a copy of what's already in the wiki: https://github.com/HeliBorg/HeliBoard/wiki/9.-Hidden-features. It's been made available in the app on user request/contribution.
+HeliBoard is licensed under the **GNU General Public License v3.0** (GPL-3.0). See [LICENSE](LICENSE) for details.
+- Parts based on AOSP Keyboard are licensed under [Apache 2.0](LICENSE-Apache-2.0).
+- App icons are licensed under [Creative Commons BY-SA 4.0](LICENSE-CC-BY-SA-4.0).
 
-## To Community
-There is the [discussions on GitHub](https://github.com/HeliBorg/HeliBoard/discussions), or if you prefer a more open network there is [Lemmy](https://lemmy.world/c/Heliboard).
-You can share your themes, layouts and dictionaries with other people:
-* Themes can be saved and loaded using the menu on top-right in the _adjust colors_ screen
-  * you can share custom colors in a separate [discussion section](https://github.com/HeliBorg/HeliBoard/discussions/categories/custom-colors)
-  * there are theme collections available at [Star-Trowa/heliboard-themes](https://github.com/Star-Trowa/heliboard-themes) and [PickleHik3/droid-tings](https://github.com/PickleHik3/droid-tings)
-* Custom keyboard layouts are text files whose content you can edit, copy and share
-  * this applies to main keyboard layouts and to special layouts adjustable in advanced settings
-  * see [layouts.md](layouts.md) for details
-  * you can share custom layouts in a separate [discussion section](https://github.com/HeliBorg/HeliBoard/discussions/categories/custom-layout)
-  * [Roccobot's Layout Maker](https://roccobot.github.io/HeliBoard-RLM/) is a browser-based editor for json layout files
-* Creating dictionaries is a little more work
-  * first you will need a wordlist, as described [here](https://codeberg.org/Helium314/aosp-dictionaries/src/branch/main/wordlists/sample.combined) and in the repository readme
-  * the you need to compile the dictionary using [external tools](https://github.com/remi0s/aosp-dictionary-tools)
-  * the resulting file (and ideally the wordlist too) can be shared with other users
-  * note that there will not be any further dictionaries added to this app, but you can add dictionaries to the [dictionaries repository](https://codeberg.org/Helium314/aosp-dictionaries)
+---
 
-## Code Contribution
-See [Contribution Guidelines](CONTRIBUTING.md)
+## Credits
 
-# Links
-* Info
-  * [Wiki](https://github.com/HeliBorg/HeliBoard/wiki), including FAQ, help on customizing layouts, and gesture data gathering
-  * [Layout documentation](layouts.md) (more technical info regarding layout customization)
-  * [For creating custom dictionaries](https://codeberg.org/Helium314/aosp-dictionaries#wordlist-information) (see also top of the linked readme)
-* Community
-  * [Lemmy](https://lemmy.world/c/Heliboard)
-  * [Reddit](https://www.reddit.com/r/HeliBoard)
-  * GitHub [discussions](https://github.com/HeliBorg/HeliBoard/discussions)
-* Other
-  * [Translations](https://translate.codeberg.org/projects/heliboard/)
-  * [Dictionaries](https://codeberg.org/Helium314/aosp-dictionaries)
-  * [k3lp](https://codeberg.org/k3lp/k3lp) is a WIP library for keyboard layout parsing that will be implemented in HeliBoard when ready (created by [FlorisBoard](https://github.com/florisboard/florisboard/) maintainers)
-  * [swipe-o-scope](https://codeberg.org/eclexic/swipe-o-scope) for visualizing gesture data as created when using gesture data gathering
-
-# License
-
-HeliBoard (as a fork of OpenBoard) is licensed under GNU General Public License v3.0.
-
- > Permissions of this strong copyleft license are conditioned on making available complete source code of licensed works and modifications, which include larger works using a licensed work, under the same license. Copyright and license notices must be preserved. Contributors provide an express grant of patent rights.
-
-See repo's [LICENSE](/LICENSE) file.
-
-Since the app is based on Apache 2.0 licensed AOSP Keyboard, an [Apache 2.0](LICENSE-Apache-2.0) license file is provided.
-The icon is licensed under [Creative Commons BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). A [license file](LICENSE-CC-BY-SA-4.0) is also included.
-
-# Credits
-- Icon by [Fabian OvrWrt](https://github.com/FabianOvrWrt) with contributions from [The Eclectic Dyslexic](https://github.com/the-eclectic-dyslexic)
+- MegaPaste streaming paste functionality implemented by [@umair2k1](https://github.com/umair2k1)
+- [HeliBoard](https://github.com/HeliBorg/HeliBoard) by [Helium314](https://github.com/Helium314) and [contributors](https://github.com/HeliBorg/HeliBoard/graphs/contributors)
 - [OpenBoard](https://github.com/openboard-team/openboard)
 - [AOSP Keyboard](https://android.googlesource.com/platform/packages/inputmethods/LatinIME/)
 - [LineageOS](https://review.lineageos.org/admin/repos/LineageOS/android_packages_inputmethods_LatinIME)
 - [Simple Keyboard](https://github.com/rkkr/simple-keyboard)
 - [Indic Keyboard](https://gitlab.com/indicproject/indic-keyboard)
 - [FlorisBoard](https://github.com/florisboard/florisboard/)
-- Our [contributors](https://github.com/HeliBorg/HeliBoard/graphs/contributors)
-
-## Funding
-
-This project is funded through [NGI Mobifree Fund](https://nlnet.nl/mobifree), a fund established by [NLnet](https://nlnet.nl) with financial support from the European Commission's [Next Generation Internet](https://ngi.eu) program. Learn more at the [NLnet project page](https://nlnet.nl/project/GestureTyping).
-
-[<img src="https://nlnet.nl/logo/banner.png" alt="NLnet foundation logo" width="20%" />](https://nlnet.nl)
-
-Further the project benefits from donations provided by many users (thank you all!).
+- Icon by [Fabian OvrWrt](https://github.com/FabianOvrWrt) with contributions from [The Eclectic Dyslexic](https://github.com/the-eclectic-dyslexic)
