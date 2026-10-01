@@ -8,6 +8,7 @@ plugins {
 
 android {
     compileSdk = 37
+    testBuildType = "runTests"
 
     defaultConfig {
         applicationId = "helium314.keyboard"
