@@ -88,7 +88,8 @@ class StreamPasteController {
                         }
                         chunks.close()
                     } catch (failure: Throwable) {
-                        chunks.close(failure)
+                        val isCancelled = failure is CancellationException || activeJob?.isCancelled == true
+                        chunks.close(if (isCancelled) null else failure)
                         if (failure is CancellationException) throw failure
                     }
                 }
@@ -125,11 +126,11 @@ class StreamPasteController {
 
     fun cancel() {
         activeJob?.cancel()
-        runCatching { activeDescriptor?.close() }
     }
 
     fun shutdown() {
         cancel()
+        runCatching { activeDescriptor?.close() }
         scope.cancel()
     }
 
