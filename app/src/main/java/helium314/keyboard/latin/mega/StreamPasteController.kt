@@ -89,7 +89,7 @@ class StreamPasteController {
                         chunks.close()
                     } catch (failure: Throwable) {
                         chunks.close(failure)
-                        throw failure
+                        if (failure is CancellationException) throw failure
                     }
                 }
                 try {
