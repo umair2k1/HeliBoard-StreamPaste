@@ -5,11 +5,11 @@ import android.net.Uri
 import android.os.ParcelFileDescriptor
 import android.os.StatFs
 import android.util.AtomicFile
-import android.system.Os
 import androidx.core.content.FileProvider
 import java.io.File
 import java.io.IOException
 import java.io.OutputStream
+import java.util.WeakHashMap
 
 /** Stores the latest completed share without retaining its payload in memory. */
 class MegaSharedMemoryManager @JvmOverloads internal constructor(
@@ -58,6 +58,7 @@ class MegaSharedMemoryManager @JvmOverloads internal constructor(
             write(output)
             output.flush()
             atomicFile.finishWrite(fileOutput)
+            pendingIdentityGeneration++
         } catch (failure: Throwable) {
             atomicFile.failWrite(fileOutput)
             throw failure
@@ -68,27 +69,32 @@ class MegaSharedMemoryManager @JvmOverloads internal constructor(
     fun pendingUri(): Uri? = synchronized(OPERATION_LOCK) {
         if (hasPendingPayload()) FileProvider.getUriForFile(appContext, authority, payloadFile) else null
     }
-
     fun openPending(): ParcelFileDescriptor? = synchronized(OPERATION_LOCK) {
-        if (hasPendingPayload()) appContext.contentResolver.openFileDescriptor(
+        if (!hasPendingPayload()) return@synchronized null
+        val descriptor = appContext.contentResolver.openFileDescriptor(
             FileProvider.getUriForFile(appContext, authority, payloadFile), "r"
-        ) else null
+        )
+        if (descriptor != null) openedDescriptorIdentities[descriptor] = pendingIdentityGeneration
+        descriptor
     }
+
+    /** Captures which staged share was opened so a later import cannot be deleted on completion. */
+    fun pendingIdentity(descriptor: ParcelFileDescriptor): Long = synchronized(OPERATION_LOCK) {
+        openedDescriptorIdentities.remove(descriptor)
+            ?: throw IllegalArgumentException("Descriptor was not opened from the pending share")
+    }
+
+    fun deletePendingIfIdentity(identity: Long): Boolean = synchronized(OPERATION_LOCK) {
+        if (identity != pendingIdentityGeneration || !hasPendingPayload()) return@synchronized false
+        atomicFile.delete()
+        pendingIdentityGeneration++
+        true
+    }
+
+
 
     fun deletePending() = synchronized(OPERATION_LOCK) {
         atomicFile.delete()
-    }
-
-    /** Identifies the opened file so completion of an older paste cannot delete a newer share. */
-    fun pendingIdentity(descriptor: ParcelFileDescriptor): Long =
-        Os.fstat(descriptor.fileDescriptor).st_ino
-
-    fun deletePendingIfIdentity(identity: Long): Boolean = synchronized(OPERATION_LOCK) {
-        if (!hasPendingPayload()) return@synchronized false
-        val currentIdentity = runCatching { Os.stat(payloadFile.path).st_ino }.getOrNull()
-        if (currentIdentity != identity) return@synchronized false
-        atomicFile.delete()
-        true
     }
 
     private fun hasPendingPayload(): Boolean {
@@ -105,6 +111,8 @@ class MegaSharedMemoryManager @JvmOverloads internal constructor(
         const val MINIMUM_FREE_BYTES = 64L * 1024 * 1024
         private const val DIRECTORY_NAME = "mega_paste"
         private val OPERATION_LOCK = Any()
+        private val openedDescriptorIdentities = WeakHashMap<ParcelFileDescriptor, Long>()
+        private var pendingIdentityGeneration = 0L
         private const val PAYLOAD_NAME = "pending"
     }
 }
