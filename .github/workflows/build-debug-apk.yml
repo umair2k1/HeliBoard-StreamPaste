@@ -1,11 +1,22 @@
-name: Build debug APK
+name: Build and release debug APK
 
 on:
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Optional release tag; generated automatically when omitted
+        required: false
+        type: string
+  push:
+    tags:
+      - 'megapaste-*'
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -19,21 +30,33 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v3
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
-
-      - name: Build with Gradle
+      - name: Build debug APK
         run: ./gradlew assembleDebug
 
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: HeliBoard-debug
           path: app/build/outputs/apk/debug/*-debug*.apk
 
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || format('megapaste-{0}', github.run_number) }}
+          name: HeliBoard MegaPaste ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || format('megapaste-{0}', github.run_number) }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: app/build/outputs/apk/debug/*-debug*.apk
+
       - name: Archive reports for failed job
         uses: actions/upload-artifact@v4
         with:
+          name: reports
+          path: '*/build/reports'
+        if: ${{ failure() }}
+[.github/workflows/build-test-auto.yml#1739]
+PUT 35.=36:
+        run: ./gradlew testDebugUnitTest
           name: reports
           path: '*/build/reports'
         if: ${{ failure() }}

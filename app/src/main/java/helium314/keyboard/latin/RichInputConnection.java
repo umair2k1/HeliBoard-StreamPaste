@@ -322,6 +322,18 @@ public final class RichInputConnection implements PrivateCommandPerformer {
      * @param newCursorPosition The new cursor position around the text.
      */
     public void commitText(final CharSequence text, final int newCursorPosition) {
+        commitTextInternal(text, newCursorPosition);
+    }
+
+    public boolean commitTextForStream(final CharSequence text) {
+        mIC = mParent.getCurrentInputConnection();
+        if (!isConnected()) {
+            return false;
+        }
+        return commitTextInternal(text, 1);
+    }
+
+    private boolean commitTextInternal(final CharSequence text, final int newCursorPosition) {
         if (DEBUG_BATCH_NESTING) checkBatchEdit();
         if (DEBUG_PREVIOUS_TEXT) checkConsistencyForDebug();
         if (DebugFlags.DEBUG_ENABLED)
@@ -355,8 +367,9 @@ public final class RichInputConnection implements PrivateCommandPerformer {
                     }
                 }
             }
-            mIC.commitText(mTempObjectForCommitText, newCursorPosition);
+            return mIC.commitText(mTempObjectForCommitText, newCursorPosition);
         }
+        return false;
     }
 
     @Nullable

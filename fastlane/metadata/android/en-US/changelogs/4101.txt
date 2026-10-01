@@ -1,3 +1,4 @@
+* add share-to-stage streaming paste for large text
 * add D-Pad
 * allow using key repeat as long-press code for toolbar keys and popups, and set it default for toolbar arrow keys
 * improve clipboard suggestion

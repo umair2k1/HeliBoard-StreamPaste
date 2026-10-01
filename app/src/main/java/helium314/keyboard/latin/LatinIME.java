@@ -33,6 +33,7 @@ import android.view.inputmethod.InlineSuggestion;
 import android.view.inputmethod.InlineSuggestionsRequest;
 import android.view.inputmethod.InlineSuggestionsResponse;
 import android.view.inputmethod.InputMethodSubtype;
+import android.widget.Toast;
 
 import helium314.keyboard.accessibility.AccessibilityUtils;
 import helium314.keyboard.compat.ConfigurationCompatKt;
@@ -70,6 +71,10 @@ import helium314.keyboard.latin.settings.SettingsSubtype;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
+import helium314.keyboard.latin.mega.MegaSharedMemoryManager;
+import helium314.keyboard.latin.mega.StreamPasteController;
+import helium314.keyboard.latin.mega.StreamPasteOutcome;
+import helium314.keyboard.latin.mega.StreamPasteStatusView;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
 import helium314.keyboard.latin.utils.ColorUtilKt;
 import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
@@ -143,6 +148,12 @@ public class LatinIME extends InputMethodService implements
     private InsetsOutlineProvider mInsetsUpdater;
     private SuggestionStripView mSuggestionStripView;
 
+    private MegaSharedMemoryManager mMegaSharedMemoryManager;
+    private StreamPasteController mStreamPasteController;
+    private StreamPasteStatusView mStreamPasteStatusView;
+    private long mStreamPasteCommittedBytes;
+    private long mStreamPasteTotalBytes;
+    private long mStreamPastePendingIdentity;
     private RichInputMethodManager mRichImm;
     final KeyboardSwitcher mKeyboardSwitcher;
     private final SubtypeState mSubtypeState = new SubtypeState((InputMethodSubtype subtype) -> { switchToSubtype(subtype); return Unit.INSTANCE; });
@@ -556,6 +567,8 @@ public class LatinIME extends InputMethodService implements
         mDisplayContext = KtxKt.getDisplayContext(this);
         KeyboardSwitcher.init(this);
         super.onCreate();
+        mMegaSharedMemoryManager = new MegaSharedMemoryManager(this);
+        mStreamPasteController = new StreamPasteController();
 
         loadSettings();
         mClipboardHistoryManager.onCreate();
@@ -705,6 +718,7 @@ public class LatinIME extends InputMethodService implements
 
     @Override
     public void onDestroy() {
+        if (mStreamPasteController != null) mStreamPasteController.shutdown();
         mClipboardHistoryManager.onDestroy();
         mDictionaryFacilitator.closeDictionaries();
         mSettings.onDestroy();
@@ -775,6 +789,7 @@ public class LatinIME extends InputMethodService implements
         mInsetsUpdater = ViewOutlineProviderUtilsKt.setInsetsOutlineProvider(view);
         KtxKt.updateSoftInputWindowLayoutParameters(this, mInputView);
         updateSuggestionStripView(view);
+        bindStreamPasteStatus();
     }
 
     public void updateSuggestionStripView(View view) {
@@ -807,6 +822,7 @@ public class LatinIME extends InputMethodService implements
         StatsUtils.onFinishInputView();
         mHandler.onFinishInputView(finishingInput);
         mStatsUtilsManager.onFinishInputView();
+        if (mStreamPasteController != null) mStreamPasteController.cancel();
         mGestureConsumer = GestureConsumer.NULL_GESTURE_CONSUMER;
         BackgroundGatheringCache.saveOrClear(this);
     }
@@ -1493,6 +1509,52 @@ public class LatinIME extends InputMethodService implements
 
     public boolean hasSuggestionStripView() {
         return null != mSuggestionStripView;
+    }
+
+    public void startStreamPaste() {
+        if (mStreamPasteController == null || mStreamPasteController.isRunning()) return;
+        final android.os.ParcelFileDescriptor descriptor = mMegaSharedMemoryManager.openPending();
+        if (descriptor == null) {
+            Toast.makeText(this, R.string.stream_paste_no_pending, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        mStreamPasteCommittedBytes = 0;
+        mStreamPastePendingIdentity = mMegaSharedMemoryManager.pendingIdentity(descriptor);
+        mStreamPasteTotalBytes = descriptor.getStatSize();
+        mStreamPasteController.startSync(
+                descriptor,
+                mStreamPasteTotalBytes,
+                text -> mInputLogic.mConnection.commitTextForStream(text),
+                (committed, total) -> {
+                    mStreamPasteCommittedBytes = committed;
+                    mStreamPasteTotalBytes = total;
+                    if (mStreamPasteStatusView != null)
+                        mStreamPasteStatusView.updateProgress(committed, total);
+                    return Unit.INSTANCE;
+                },
+                outcome -> {
+                    if (outcome == StreamPasteOutcome.COMPLETED || mStreamPasteCommittedBytes > 0)
+                        mMegaSharedMemoryManager.deletePendingIfIdentity(mStreamPastePendingIdentity);
+                    clearStreamPasteStatus();
+                    return Unit.INSTANCE;
+                });
+        bindStreamPasteStatus();
+    }
+
+    private void bindStreamPasteStatus() {
+        if (mStreamPasteController == null || !mStreamPasteController.isRunning() || !hasSuggestionStripView())
+            return;
+        mStreamPasteStatusView = new StreamPasteStatusView(this, () -> {
+            mStreamPasteController.cancel();
+            return Unit.INSTANCE;
+        });
+        mStreamPasteStatusView.updateProgress(mStreamPasteCommittedBytes, mStreamPasteTotalBytes);
+        mSuggestionStripView.showStreamPasteStatus(mStreamPasteStatusView);
+    }
+
+    private void clearStreamPasteStatus() {
+        if (hasSuggestionStripView()) mSuggestionStripView.clearStreamPasteStatus();
+        mStreamPasteStatusView = null;
     }
 
     private void setSuggestedWords(final SuggestedWords suggestedWords) {

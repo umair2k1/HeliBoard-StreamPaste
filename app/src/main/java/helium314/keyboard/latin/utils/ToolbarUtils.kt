@@ -74,6 +74,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     COPY -> KeyCode.CLIPBOARD_COPY
     CUT -> KeyCode.CLIPBOARD_CUT
     PASTE -> KeyCode.CLIPBOARD_PASTE
+    STREAM_PASTE -> KeyCode.MEGA_PASTE
     ONE_HANDED -> KeyCode.TOGGLE_ONE_HANDED_MODE
     INCOGNITO -> KeyCode.TOGGLE_INCOGNITO_MODE
     AUTOCORRECT -> KeyCode.TOGGLE_AUTOCORRECT
@@ -121,7 +122,7 @@ fun getCodeForToolbarKeyLongClick(key: ToolbarKey) = Settings.getInstance().getC
 enum class ToolbarKey {
     VOICE, CLIPBOARD, NUMPAD, DPAD, UNDO, REDO, SETTINGS, SELECT_ALL, SELECT_WORD, COPY, CUT, PASTE, ONE_HANDED, FLOATING, SPLIT,
     INCOGNITO, AUTOCORRECT, CLEAR_CLIPBOARD, CLOSE_HISTORY, EMOJI, LEFT, RIGHT, UP, DOWN, WORD_LEFT, WORD_RIGHT,
-    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING
+    PAGE_UP, PAGE_DOWN, FULL_LEFT, FULL_RIGHT, PAGE_START, PAGE_END, BACKGROUND_GATHERING, STREAM_PASTE
 }
 
 enum class ToolbarMode {
@@ -131,7 +132,7 @@ enum class ToolbarMode {
 val toolbarKeyStrings = entries.associateWithTo(EnumMap(ToolbarKey::class.java)) { it.toString().lowercase(Locale.US) }
 
 val defaultToolbarPref by lazy {
-    val default = listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, REDO, SELECT_WORD, COPY, PASTE, LEFT, RIGHT)
+    val default = listOf(SETTINGS, VOICE, CLIPBOARD, UNDO, REDO, SELECT_WORD, COPY, PASTE, LEFT, RIGHT, STREAM_PASTE)
     val others = entries.filterNot { it in default || it == CLOSE_HISTORY }
     default.joinToString(Separators.ENTRY) { it.name + Separators.KV + true } + Separators.ENTRY +
             others.joinToString(Separators.ENTRY) { it.name + Separators.KV + false }
@@ -161,8 +162,10 @@ private fun upgradeToolbarPref(prefs: SharedPreferences, pref: String, default: 
     val splitDefault = defaultToolbarPref.split(Separators.ENTRY)
     splitDefault.forEach { entry ->
         val keyWithSeparator = entry.substringBefore(Separators.KV) + Separators.KV
-        if (list.none { it.startsWith(keyWithSeparator) })
-            list.add("${keyWithSeparator}false")
+        if (list.none { it.startsWith(keyWithSeparator) }) {
+            list.add(if (pref == Settings.PREF_TOOLBAR_KEYS && entry.startsWith("STREAM_PASTE" + Separators.KV)) entry
+                else "${keyWithSeparator}false")
+        }
     }
     // likely not needed, but better prepare for possibility of key removal
     list.removeAll {

@@ -85,6 +85,21 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
+        <activity android:name=".mega.ShareTargetReceiverActivity"
+            android:label="@string/stream_paste_share_target"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/*" />
+            </intent-filter>
+        </activity>
+
 
         <activity android:name="helium314.keyboard.keyboard.emoji.EmojiSearchActivity" android:exported="false"
             android:theme="@style/TransparentActivityTheme" android:excludeFromRecents="true" android:noHistory="true"
@@ -118,6 +133,15 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/clipboard_provider_path"/>
         </provider>
+        <provider android:name=".mega.MegaPasteContentProvider"
+            android:authorities="${applicationId}.megapasteprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/mega_paste_provider_paths" />
+        </provider>
+
 
         <!-- necessary for sending mail attachments, remove when data gathering phase is done (end of 2026 latest) -->
         <provider android:name="helium314.keyboard.settings.screens.gesturedata.GestureFileProvider"

@@ -782,6 +782,9 @@ public final class InputLogic {
             case KeyCode.CLIPBOARD_PASTE:
                 paste(mLatinIME.getCurrentInputEditorInfo().packageName);
                 break;
+            case KeyCode.MEGA_PASTE:
+                mLatinIME.startStreamPaste();
+                break;
             case KeyCode.SHIFT_ENTER:
                 // todo: try using sendDownUpKeyEventWithMetaState() and remove the key code maybe
                 final Event tmpEvent = Event.createSoftwareKeypressEvent(Constants.CODE_ENTER,

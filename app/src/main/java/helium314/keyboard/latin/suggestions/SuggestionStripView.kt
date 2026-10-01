@@ -24,6 +24,7 @@ import android.view.View.OnLongClickListener
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityEvent
 import android.widget.ImageButton
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.RelativeLayout
 import android.widget.TextView
@@ -115,8 +116,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
 
     // toolbar views, drawables and setup
     private val toolbar: ViewGroup = findViewById(R.id.toolbar)
-    private val toolbarContainer: View = findViewById(R.id.toolbar_container)
+    private val toolbarContainer: HorizontalScrollView = findViewById(R.id.toolbar_container)
     private val pinnedKeys: ViewGroup = findViewById(R.id.pinned_keys)
+    private var streamPasteStatusView: View? = null
+    private var toolbarVisibleBeforeStreamPaste = false
     private val suggestionsStrip: ViewGroup = findViewById(R.id.suggestions_strip)
     private val toolbarExpandKey = findViewById<ImageButton>(R.id.suggestions_strip_toolbar_key)
     private val incognitoIcon = KeyboardIconsSet.instance.getNewDrawable(ToolbarKey.INCOGNITO.name, context)
@@ -228,9 +231,10 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
     }
 
     fun setToolbarVisibility(toolbarVisible: Boolean) {
-        pinnedKeys.isVisible = !toolbarVisible
-        suggestionsStrip.isVisible = !toolbarVisible
-        toolbarContainer.isVisible = toolbarVisible
+        val visible = toolbarVisible || streamPasteStatusView != null
+        pinnedKeys.isVisible = !visible
+        suggestionsStrip.isVisible = !visible
+        toolbarContainer.isVisible = visible
 
         if (DEBUG_SUGGESTIONS) {
             for (view in debugInfoViews) {
@@ -238,8 +242,27 @@ class SuggestionStripView(context: Context, attrs: AttributeSet?, defStyle: Int)
             }
         }
 
-        toolbarExpandKey.scaleX = (if (toolbarVisible) -1f else 1f) * direction
+        toolbarExpandKey.scaleX = (if (visible) -1f else 1f) * direction
     }
+
+    fun showStreamPasteStatus(view: View) {
+        clearStreamPasteStatus()
+        toolbarVisibleBeforeStreamPaste = toolbarContainer.isVisible
+        streamPasteStatusView = view
+        toolbar.addView(view, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.MATCH_PARENT
+        ))
+        setToolbarVisibility(true)
+        toolbarContainer.post { toolbarContainer.scrollTo(view.left, 0) }
+    }
+
+    fun clearStreamPasteStatus() {
+        val statusView = streamPasteStatusView ?: return
+        (statusView.parent as? ViewGroup)?.removeView(statusView)
+        streamPasteStatusView = null
+        setToolbarVisibility(toolbarVisibleBeforeStreamPaste)
+    }
+
 
     fun setSuggestions(suggestions: SuggestedWords, isRtlLanguage: Boolean) {
         clear()

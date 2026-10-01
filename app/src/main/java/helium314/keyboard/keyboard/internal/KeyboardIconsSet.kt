@@ -136,6 +136,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy
                     ToolbarKey.CUT -> R.drawable.sym_keyboard_cut
                     ToolbarKey.PASTE -> R.drawable.sym_keyboard_paste
+                    ToolbarKey.STREAM_PASTE -> R.drawable.sym_keyboard_paste
                     ToolbarKey.ONE_HANDED -> R.drawable.sym_keyboard_start_onehanded_holo
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.sym_keyboard_incognito_holo
@@ -200,6 +201,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy
                     ToolbarKey.CUT -> R.drawable.sym_keyboard_cut
                     ToolbarKey.PASTE -> R.drawable.sym_keyboard_paste
+                    ToolbarKey.STREAM_PASTE -> R.drawable.sym_keyboard_paste
                     ToolbarKey.ONE_HANDED -> R.drawable.sym_keyboard_start_onehanded_lxx
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.sym_keyboard_incognito_lxx
@@ -264,6 +266,7 @@ class KeyboardIconsSet private constructor() {
                     ToolbarKey.COPY -> R.drawable.sym_keyboard_copy_rounded
                     ToolbarKey.CUT -> R.drawable.sym_keyboard_cut_rounded
                     ToolbarKey.PASTE -> R.drawable.sym_keyboard_paste_rounded
+                    ToolbarKey.STREAM_PASTE -> R.drawable.sym_keyboard_paste_rounded
                     ToolbarKey.ONE_HANDED -> R.drawable.sym_keyboard_start_onehanded_rounded
                     ToolbarKey.FLOATING -> R.drawable.ic_drag_indicator
                     ToolbarKey.INCOGNITO -> R.drawable.sym_keyboard_incognito_lxx
