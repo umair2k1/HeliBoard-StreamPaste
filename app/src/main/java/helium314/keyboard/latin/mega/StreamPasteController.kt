@@ -19,8 +19,6 @@ import java.nio.charset.StandardCharsets
 
 enum class StreamPasteOutcome { COMPLETED, CANCELLED, FAILED }
 class StreamPasteController {
-    
-
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var activeJob: Job? = null
     private var activeDescriptor: ParcelFileDescriptor? = null
