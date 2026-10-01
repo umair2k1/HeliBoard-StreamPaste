@@ -1,7 +1,9 @@
 package helium314.keyboard.latin.mega
 
 import android.content.Context
+import androidx.core.content.FileProvider
 import helium314.keyboard.latin.mega.MegaSharedMemoryManager.Companion.MINIMUM_FREE_BYTES
+import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
@@ -16,6 +18,14 @@ import kotlin.test.assertFalse
 @RunWith(RobolectricTestRunner::class)
 class MegaSharedMemoryManagerTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
+
+    @Before
+    fun clearFileProviderPathCache() {
+        val cacheField = FileProvider::class.java.getDeclaredField("sCache")
+        cacheField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        (cacheField.get(null) as MutableMap<String, *>).clear()
+    }
 
     @Test
     fun stagesAndReadsGeneratedPayloadLargerThanOneMegabyte() {
