@@ -1,6 +1,6 @@
 name: Build and release debug APK
 
-on:
+"on":
   workflow_dispatch:
     inputs:
       release_tag:
