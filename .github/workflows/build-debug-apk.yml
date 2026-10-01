@@ -54,9 +54,3 @@ jobs:
           name: reports
           path: '*/build/reports'
         if: ${{ failure() }}
-[.github/workflows/build-test-auto.yml#1739]
-PUT 35.=36:
-        run: ./gradlew testDebugUnitTest
-          name: reports
-          path: '*/build/reports'
-        if: ${{ failure() }}
