@@ -9,7 +9,7 @@ name: Build and release debug APK
         type: string
   push:
     tags:
-      - 'megapaste-*'
+      - 'streampaste-*'
       - 'v*'
 
 permissions:
@@ -36,14 +36,14 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HeliBoard-debug
+          name: HeliBoard-StreamPaste-debug
           path: app/build/outputs/apk/debug/*-debug*.apk
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || format('megapaste-{0}', github.run_number) }}
-          name: HeliBoard MegaPaste ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || format('megapaste-{0}', github.run_number) }}
+          tag_name: ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || format('streampaste-{0}', github.run_number) }}
+          name: HeliBoard StreamPaste ${{ github.event_name == 'push' && github.ref_name || inputs.release_tag || format('streampaste-{0}', github.run_number) }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: app/build/outputs/apk/debug/*-debug*.apk

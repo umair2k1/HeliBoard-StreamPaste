@@ -1,4 +1,4 @@
-package helium314.keyboard.latin.mega
+package helium314.keyboard.latin.streampaste
 
 import android.content.Context
 import android.view.Gravity

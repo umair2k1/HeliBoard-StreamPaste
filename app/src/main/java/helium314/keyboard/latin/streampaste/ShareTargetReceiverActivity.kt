@@ -1,4 +1,4 @@
-package helium314.keyboard.latin.mega
+package helium314.keyboard.latin.streampaste
 
 import android.app.Activity
 import android.content.Intent
@@ -28,7 +28,7 @@ class ShareTargetReceiverActivity : Activity() {
         activityScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    val manager = MegaSharedMemoryManager(this@ShareTargetReceiverActivity)
+                    val manager = StreamPasteMemoryManager(this@ShareTargetReceiverActivity)
                     if (sharedUris.isNotEmpty()) manager.stageUris(sharedUris)
                     else manager.stageText(text!!)
                 }

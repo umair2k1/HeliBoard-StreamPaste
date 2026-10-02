@@ -1,4 +1,4 @@
-package helium314.keyboard.latin.mega
+package helium314.keyboard.latin.streampaste
 
 import android.os.ParcelFileDescriptor
 import kotlinx.coroutines.ExperimentalCoroutinesApi

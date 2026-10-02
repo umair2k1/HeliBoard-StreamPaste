@@ -1,4 +1,4 @@
-package helium314.keyboard.latin.mega
+package helium314.keyboard.latin.streampaste
 
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -25,21 +25,21 @@ open class ShadowFileProvider {
         @Implementation
         @JvmStatic
         fun getUriForFile(context: Context, authority: String, file: File): Uri {
-            return Uri.parse("content://$authority/mega_paste/${file.name}")
+            return Uri.parse("content://$authority/stream_paste/${file.name}")
         }
     }
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(shadows = [ShadowFileProvider::class])
-class MegaClipboardAndProcessTextTest {
+class StreamPasteClipboardAndProcessTextTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
 
     @org.junit.Before
     fun setupStorage() {
         val cache = context.cacheDir
         org.robolectric.shadows.ShadowStatFs.registerStats(cache.path, 1000000, 1000000, 1000000)
-        val megaDir = File(cache, "mega_paste").apply { mkdirs() }
+        val megaDir = File(cache, "stream_paste").apply { mkdirs() }
         org.robolectric.shadows.ShadowStatFs.registerStats(megaDir.path, 1000000, 1000000, 1000000)
     }
     @Test
@@ -49,15 +49,15 @@ class MegaClipboardAndProcessTextTest {
 
     @Test
     fun stageTextCreatesPendingPayloadWithTimestamp() {
-        val manager = MegaSharedMemoryManager(context)
+        val manager = StreamPasteMemoryManager(context)
         manager.deletePending()
         assertFalse(manager.hasPendingPayload())
 
-        val uri = manager.stageText("Hello MegaPaste from stageText")
-        assertTrue(uri.toString().contains("megapasteprovider"))
+        val uri = manager.stageText("Hello StreamPaste from stageText")
+        assertTrue(uri.toString().contains("streampasteprovider"))
         assertTrue(manager.hasPendingPayload())
         assertTrue(manager.pendingLastModified() > 0)
-        assertEquals("Hello MegaPaste from stageText", readPending())
+        assertEquals("Hello StreamPaste from stageText", readPending())
         manager.deletePending()
     }
 
@@ -66,7 +66,7 @@ class MegaClipboardAndProcessTextTest {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("test", "Copied text from clipboard"))
 
-        val manager = MegaSharedMemoryManager(context)
+        val manager = StreamPasteMemoryManager(context)
         manager.deletePending()
         assertFalse(manager.hasPendingPayload())
 
@@ -82,7 +82,7 @@ class MegaClipboardAndProcessTextTest {
     fun stageFromClipboardWithEmptyClipboardReturnsFalse() {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.clearPrimaryClip()
-        val manager = MegaSharedMemoryManager(context)
+        val manager = StreamPasteMemoryManager(context)
         manager.deletePending()
 
         assertFalse(manager.stageFromClipboard())
@@ -96,7 +96,7 @@ class MegaClipboardAndProcessTextTest {
         val clip = ClipData(android.content.ClipDescription("image", arrayOf("image/png")), ClipData.Item(Uri.parse("content://fake/image.png")))
         clipboard.setPrimaryClip(clip)
 
-        val manager = MegaSharedMemoryManager(context)
+        val manager = StreamPasteMemoryManager(context)
         manager.deletePending()
 
         assertFalse(manager.stageFromClipboard())
@@ -105,7 +105,7 @@ class MegaClipboardAndProcessTextTest {
 
     @Test
     fun shareTargetReceiverActivityFinishesOnEmptyIntentWithoutStaging() {
-        val manager = MegaSharedMemoryManager(context)
+        val manager = StreamPasteMemoryManager(context)
         manager.deletePending()
 
         val intent = Intent(Intent.ACTION_SEND)
@@ -118,7 +118,7 @@ class MegaClipboardAndProcessTextTest {
 
     @Test
     fun shareTargetReceiverActivityHandlesProcessTextIntentAndStagesPayload() {
-        val manager = MegaSharedMemoryManager(context)
+        val manager = StreamPasteMemoryManager(context)
         manager.deletePending()
         assertFalse(manager.hasPendingPayload())
 
@@ -148,7 +148,7 @@ class MegaClipboardAndProcessTextTest {
     }
 
     private fun readPending(): String {
-        val payloadFile = File(File(context.cacheDir, "mega_paste"), "pending")
+        val payloadFile = File(File(context.cacheDir, "stream_paste"), "pending")
         return payloadFile.readText(Charsets.UTF_8)
     }
 }

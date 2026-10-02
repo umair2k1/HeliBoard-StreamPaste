@@ -85,7 +85,7 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
-        <activity android:name=".mega.ShareTargetReceiverActivity"
+        <activity android:name=".streampaste.ShareTargetReceiverActivity"
             android:label="@string/stream_paste_share_target"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:exported="true">
@@ -139,13 +139,13 @@ SPDX-License-Identifier: Apache-2.0 AND GPL-3.0-only
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/clipboard_provider_path"/>
         </provider>
-        <provider android:name=".mega.MegaPasteContentProvider"
-            android:authorities="${applicationId}.megapasteprovider"
+        <provider android:name=".streampaste.StreamPasteContentProvider"
+            android:authorities="${applicationId}.streampasteprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
                 android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/mega_paste_provider_paths" />
+                android:resource="@xml/stream_paste_provider_paths" />
         </provider>
 
 

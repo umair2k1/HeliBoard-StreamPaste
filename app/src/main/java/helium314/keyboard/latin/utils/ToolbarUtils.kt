@@ -74,7 +74,7 @@ fun getCodeForToolbarKey(key: ToolbarKey) = Settings.getInstance().getCustomTool
     COPY -> KeyCode.CLIPBOARD_COPY
     CUT -> KeyCode.CLIPBOARD_CUT
     PASTE -> KeyCode.CLIPBOARD_PASTE
-    STREAM_PASTE -> KeyCode.MEGA_PASTE
+    STREAM_PASTE -> KeyCode.STREAM_PASTE
     ONE_HANDED -> KeyCode.TOGGLE_ONE_HANDED_MODE
     INCOGNITO -> KeyCode.TOGGLE_INCOGNITO_MODE
     AUTOCORRECT -> KeyCode.TOGGLE_AUTOCORRECT

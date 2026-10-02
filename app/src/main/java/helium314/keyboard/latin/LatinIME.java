@@ -71,10 +71,10 @@ import helium314.keyboard.latin.settings.SettingsSubtype;
 import helium314.keyboard.latin.settings.SettingsValues;
 import helium314.keyboard.latin.suggestions.SuggestionStripView;
 import helium314.keyboard.latin.suggestions.SuggestionStripViewAccessor;
-import helium314.keyboard.latin.mega.MegaSharedMemoryManager;
-import helium314.keyboard.latin.mega.StreamPasteController;
-import helium314.keyboard.latin.mega.StreamPasteOutcome;
-import helium314.keyboard.latin.mega.StreamPasteStatusView;
+import helium314.keyboard.latin.streampaste.StreamPasteMemoryManager;
+import helium314.keyboard.latin.streampaste.StreamPasteController;
+import helium314.keyboard.latin.streampaste.StreamPasteOutcome;
+import helium314.keyboard.latin.streampaste.StreamPasteStatusView;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
 import helium314.keyboard.latin.utils.ColorUtilKt;
 import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
@@ -149,7 +149,7 @@ public class LatinIME extends InputMethodService implements
     private InsetsOutlineProvider mInsetsUpdater;
     private SuggestionStripView mSuggestionStripView;
 
-    private MegaSharedMemoryManager mMegaSharedMemoryManager;
+    private StreamPasteMemoryManager mStreamPasteMemoryManager;
     private StreamPasteController mStreamPasteController;
     private StreamPasteStatusView mStreamPasteStatusView;
     private long mStreamPasteCommittedBytes;
@@ -568,7 +568,7 @@ public class LatinIME extends InputMethodService implements
         mDisplayContext = KtxKt.getDisplayContext(this);
         KeyboardSwitcher.init(this);
         super.onCreate();
-        mMegaSharedMemoryManager = new MegaSharedMemoryManager(this);
+        mStreamPasteMemoryManager = new StreamPasteMemoryManager(this);
         mStreamPasteController = new StreamPasteController();
 
         loadSettings();
@@ -1526,8 +1526,8 @@ public class LatinIME extends InputMethodService implements
                 ? helium314.keyboard.compat.ClipboardManagerCompat.getClipTimestamp(clipData)
                 : null;
 
-        final boolean hasPending = mMegaSharedMemoryManager.hasPendingPayload();
-        final long pendingModified = hasPending ? mMegaSharedMemoryManager.pendingLastModified() : 0L;
+        final boolean hasPending = mStreamPasteMemoryManager.hasPendingPayload();
+        final long pendingModified = hasPending ? mStreamPasteMemoryManager.pendingLastModified() : 0L;
         final boolean shouldStageClipboard = (!hasPending) || (clipTimestamp != null && clipTimestamp > pendingModified);
 
         if (!shouldStageClipboard) {
@@ -1536,9 +1536,9 @@ public class LatinIME extends InputMethodService implements
         }
 
         ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() -> {
-            final boolean staged = mMegaSharedMemoryManager.stageFromClipboard();
+            final boolean staged = mStreamPasteMemoryManager.stageFromClipboard();
             mHandler.post(() -> {
-                if (!staged && !mMegaSharedMemoryManager.hasPendingPayload()) {
+                if (!staged && !mStreamPasteMemoryManager.hasPendingPayload()) {
                     Toast.makeText(this, R.string.stream_paste_no_pending, Toast.LENGTH_SHORT).show();
                     return;
                 }
@@ -1552,14 +1552,14 @@ public class LatinIME extends InputMethodService implements
 
         ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() -> {
             try {
-                mMegaSharedMemoryManager.stageText(text);
+                mStreamPasteMemoryManager.stageText(text);
             } catch (java.io.IOException e) {
                 Log.e(TAG, "Failed to stage clipboard text for stream paste", e);
                 mHandler.post(() -> Toast.makeText(this, R.string.stream_paste_import_error, Toast.LENGTH_SHORT).show());
                 return;
             }
             mHandler.post(() -> {
-                if (!mMegaSharedMemoryManager.hasPendingPayload()) {
+                if (!mStreamPasteMemoryManager.hasPendingPayload()) {
                     Toast.makeText(this, R.string.stream_paste_no_pending, Toast.LENGTH_SHORT).show();
                     return;
                 }
@@ -1570,13 +1570,13 @@ public class LatinIME extends InputMethodService implements
 
     private void startStreamPasteInternal() {
         if (mStreamPasteController == null || mStreamPasteController.isRunning()) return;
-        final android.os.ParcelFileDescriptor descriptor = mMegaSharedMemoryManager.openPending();
+        final android.os.ParcelFileDescriptor descriptor = mStreamPasteMemoryManager.openPending();
         if (descriptor == null) {
             Toast.makeText(this, R.string.stream_paste_no_pending, Toast.LENGTH_SHORT).show();
             return;
         }
         mStreamPasteCommittedBytes = 0;
-        mStreamPastePendingIdentity = mMegaSharedMemoryManager.pendingIdentity(descriptor);
+        mStreamPastePendingIdentity = mStreamPasteMemoryManager.pendingIdentity(descriptor);
         mStreamPasteTotalBytes = descriptor.getStatSize();
         mStreamPasteController.startSync(
                 descriptor,
@@ -1591,7 +1591,7 @@ public class LatinIME extends InputMethodService implements
                 },
                 outcome -> {
                     if (outcome == StreamPasteOutcome.COMPLETED || mStreamPasteCommittedBytes > 0)
-                        mMegaSharedMemoryManager.deletePendingIfIdentity(mStreamPastePendingIdentity);
+                        mStreamPasteMemoryManager.deletePendingIfIdentity(mStreamPastePendingIdentity);
                     clearStreamPasteStatus();
                     return Unit.INSTANCE;
                 });

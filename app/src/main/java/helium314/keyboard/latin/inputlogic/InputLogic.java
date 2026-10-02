@@ -782,7 +782,7 @@ public final class InputLogic {
             case KeyCode.CLIPBOARD_PASTE:
                 paste(mLatinIME.getCurrentInputEditorInfo().packageName);
                 break;
-            case KeyCode.MEGA_PASTE:
+            case KeyCode.STREAM_PASTE:
                 mLatinIME.startStreamPaste();
                 break;
             case KeyCode.SHIFT_ENTER:

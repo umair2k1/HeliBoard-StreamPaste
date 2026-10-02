@@ -1,4 +1,4 @@
-package helium314.keyboard.latin.mega
+package helium314.keyboard.latin.streampaste
 
 import android.content.ClipDescription
 import android.content.ClipboardManager
@@ -14,7 +14,7 @@ import java.io.OutputStream
 import java.io.OutputStreamWriter
 import java.util.WeakHashMap
 /** Stores the latest completed share without retaining its payload in memory. */
-class MegaSharedMemoryManager @JvmOverloads internal constructor(
+class StreamPasteMemoryManager @JvmOverloads internal constructor(
     context: Context,
     private val maximumBytes: Long = MAXIMUM_BYTES,
     private val availableBytes: (File) -> Long = { directory -> StatFs(directory.path).availableBytes },
@@ -23,7 +23,7 @@ class MegaSharedMemoryManager @JvmOverloads internal constructor(
     private val directory = File(appContext.cacheDir, DIRECTORY_NAME)
     private val payloadFile = File(directory, PAYLOAD_NAME)
     private val atomicFile = AtomicFile(payloadFile)
-    private val authority = "${appContext.packageName}.megapasteprovider"
+    private val authority = "${appContext.packageName}.streampasteprovider"
 
     @Throws(IOException::class)
     fun stage(write: (OutputStream) -> Unit): Uri = synchronized(OPERATION_LOCK) {
@@ -206,7 +206,7 @@ class MegaSharedMemoryManager @JvmOverloads internal constructor(
     companion object {
         const val MAXIMUM_BYTES = 256L * 1024 * 1024
         const val MINIMUM_FREE_BYTES = 64L * 1024 * 1024
-        private const val DIRECTORY_NAME = "mega_paste"
+        private const val DIRECTORY_NAME = "stream_paste"
         private val OPERATION_LOCK = Any()
         private val openedDescriptorIdentities = WeakHashMap<ParcelFileDescriptor, Long>()
         private var pendingIdentityGeneration = 0L

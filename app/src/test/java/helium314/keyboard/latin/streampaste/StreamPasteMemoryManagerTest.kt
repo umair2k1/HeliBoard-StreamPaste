@@ -1,8 +1,9 @@
-package helium314.keyboard.latin.mega
+package helium314.keyboard.latin.streampaste
 
 import android.content.Context
 import androidx.core.content.FileProvider
-import helium314.keyboard.latin.mega.MegaSharedMemoryManager.Companion.MINIMUM_FREE_BYTES
+import helium314.keyboard.latin.streampaste.StreamPasteMemoryManager.Companion.MINIMUM_FREE_BYTES
+import org.robolectric.annotation.Config
 import org.junit.Before
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -16,7 +17,8 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertFalse
 
 @RunWith(RobolectricTestRunner::class)
-class MegaSharedMemoryManagerTest {
+@Config(shadows = [ShadowFileProvider::class])
+class StreamPasteMemoryManagerTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
 
     @Before
@@ -29,7 +31,7 @@ class MegaSharedMemoryManagerTest {
 
     @Test
     fun stagesAndReadsGeneratedPayloadLargerThanOneMegabyte() {
-        val manager = MegaSharedMemoryManager(context, availableBytes = { Long.MAX_VALUE })
+        val manager = StreamPasteMemoryManager(context, availableBytes = { Long.MAX_VALUE })
         manager.deletePending()
         val block = ByteArray(8 * 1024) { (it % 251).toByte() }
         val repetitions = 160
@@ -59,7 +61,7 @@ class MegaSharedMemoryManagerTest {
 
     @Test
     fun failedImportPreservesPreviousPayload() {
-        val manager = MegaSharedMemoryManager(context, availableBytes = { Long.MAX_VALUE })
+        val manager = StreamPasteMemoryManager(context, availableBytes = { Long.MAX_VALUE })
         manager.deletePending()
         manager.stage { it.write("earlier".toByteArray()) }
 
@@ -76,7 +78,7 @@ class MegaSharedMemoryManagerTest {
 
     @Test
     fun completingPasteDoesNotDeleteAStillNewerStagedShare() {
-        val manager = MegaSharedMemoryManager(context, availableBytes = { Long.MAX_VALUE })
+        val manager = StreamPasteMemoryManager(context, availableBytes = { Long.MAX_VALUE })
         manager.deletePending()
         manager.stage { it.write("consumed".toByteArray()) }
         val descriptor = assertNotNull(manager.openPending())
@@ -93,13 +95,13 @@ class MegaSharedMemoryManagerTest {
 
     @Test
     fun sizeAndHeadroomLimitsRejectWritesWithoutReplacingPendingPayload() {
-        val sizeLimited = MegaSharedMemoryManager(context, maximumBytes = 4, availableBytes = { Long.MAX_VALUE })
+        val sizeLimited = StreamPasteMemoryManager(context, maximumBytes = 4, availableBytes = { Long.MAX_VALUE })
         sizeLimited.deletePending()
         sizeLimited.stage { it.write("keep".toByteArray()) }
         assertFailsWith<IOException> { sizeLimited.stage { it.write("12345".toByteArray()) } }
         assertEquals("keep", readPending(sizeLimited))
 
-        val headroomLimited = MegaSharedMemoryManager(
+        val headroomLimited = StreamPasteMemoryManager(
             context,
             maximumBytes = 16,
             availableBytes = { MINIMUM_FREE_BYTES },
@@ -109,7 +111,7 @@ class MegaSharedMemoryManagerTest {
         sizeLimited.deletePending()
     }
 
-    private fun readPending(manager: MegaSharedMemoryManager): String {
+    private fun readPending(manager: StreamPasteMemoryManager): String {
         val uri = assertNotNull(manager.pendingUri())
         return context.contentResolver.openInputStream(uri)!!.bufferedReader().use { it.readText() }
     }
