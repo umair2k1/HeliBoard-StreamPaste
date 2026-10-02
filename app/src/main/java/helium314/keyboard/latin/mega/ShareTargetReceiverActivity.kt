@@ -12,8 +12,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.OutputStream
-import java.io.OutputStreamWriter
 
 class ShareTargetReceiverActivity : Activity() {
     private val activityScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -22,6 +20,7 @@ class ShareTargetReceiverActivity : Activity() {
         super.onCreate(savedInstanceState)
         val sharedUris = intent.sharedUris()
         val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)
+            ?: intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT)
         if (sharedUris.isEmpty() && text == null) {
             reportFailure()
             return
@@ -29,46 +28,20 @@ class ShareTargetReceiverActivity : Activity() {
         activityScope.launch {
             val result = withContext(Dispatchers.IO) {
                 runCatching {
-                    MegaSharedMemoryManager(this@ShareTargetReceiverActivity).stage { output ->
-                        if (sharedUris.isNotEmpty()) writeUris(sharedUris, output)
-                        else writeText(text!!, output)
-                    }
+                    val manager = MegaSharedMemoryManager(this@ShareTargetReceiverActivity)
+                    if (sharedUris.isNotEmpty()) manager.stageUris(sharedUris)
+                    else manager.stageText(text!!)
                 }
             }
-            if (result.isFailure) reportFailure()
-            finish()
-        }
-    }
-
-    private fun writeUris(uris: List<Uri>, output: OutputStream) {
-        val buffer = ByteArray(COPY_BUFFER_SIZE)
-        uris.forEachIndexed { index, uri ->
-            if (index > 0) output.write(NEWLINE)
-            val input = contentResolver.openInputStream(uri) ?: throw IllegalStateException("Cannot open shared item")
-            input.use { stream ->
-                while (true) {
-                    val read = stream.read(buffer)
-                    if (read < 0) break
-                    output.write(buffer, 0, read)
-                }
+            if (result.isFailure) {
+                reportFailure()
+            } else {
+                Toast.makeText(this@ShareTargetReceiverActivity, R.string.stream_paste_staged_success, Toast.LENGTH_SHORT).show()
+                finish()
             }
         }
     }
 
-    private fun writeText(text: CharSequence, output: OutputStream) {
-        val writer = OutputStreamWriter(output, Charsets.UTF_8)
-        val buffer = CharArray(TEXT_BUFFER_SIZE)
-        var offset = 0
-        while (offset < text.length) {
-            var count = minOf(buffer.size, text.length - offset)
-            if (offset + count < text.length && count > 0 && Character.isHighSurrogate(text[offset + count - 1]) &&
-                Character.isLowSurrogate(text[offset + count])) count--
-            for (i in 0 until count) buffer[i] = text[offset + i]
-            writer.write(buffer, 0, count)
-            offset += count
-        }
-        writer.flush()
-    }
 
     private fun reportFailure() {
         Toast.makeText(this, R.string.stream_paste_import_error, Toast.LENGTH_LONG).show()
@@ -86,9 +59,4 @@ class ShareTargetReceiverActivity : Activity() {
         getParcelableExtra<Uri>(Intent.EXTRA_STREAM)?.let(::listOf).orEmpty()
     }
 
-    private companion object {
-        const val COPY_BUFFER_SIZE = 32 * 1024
-        const val TEXT_BUFFER_SIZE = 8 * 1024
-        val NEWLINE = byteArrayOf('\n'.code.toByte())
-    }
 }

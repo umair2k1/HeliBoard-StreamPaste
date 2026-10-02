@@ -1313,7 +1313,8 @@ New dictionary:
     <string name="stream_paste">Stream Paste</string>
     <string name="stream_paste_share_target">Stream Paste</string>
     <string name="stream_paste_cancel">Cancel</string>
-    <string name="stream_paste_no_pending">No staged text to paste</string>
+    <string name="stream_paste_no_pending">No staged or copied text to paste</string>
+    <string name="stream_paste_staged_success">Text staged for Stream Paste</string>
     <string name="stream_paste_import_error">Could not stage shared text</string>
     <string name="stream_paste_progress">%1$d%% · %2$d KB / %3$d KB</string>
     <!-- new strings should go above the section for gesture data gathering -->

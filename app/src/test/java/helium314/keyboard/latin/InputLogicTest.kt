@@ -925,6 +925,23 @@ class InputLogicTest {
         assertEquals(0, delayedMessages.size)
     }
 
+    @Test fun clipboardPasteShortTextCommitsDirectly() {
+        val clipboard = latinIME.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", "short clipboard content"))
+        setText("")
+        functionalKeyPress(KeyCode.CLIPBOARD_PASTE)
+        assertEquals("short clipboard content", text)
+    }
+
+    @Test fun clipboardPasteLongTextRoutesToStreamPaste() {
+        val clipboard = latinIME.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        val longText = "a".repeat(InputLogic.STREAM_PASTE_AUTO_THRESHOLD + 1)
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", longText))
+        setText("")
+        functionalKeyPress(KeyCode.CLIPBOARD_PASTE)
+        assertEquals("", text)
+    }
+
 }
 
 private var currentScript = ScriptUtils.SCRIPT_LATIN

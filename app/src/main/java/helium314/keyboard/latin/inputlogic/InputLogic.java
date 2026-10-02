@@ -2687,12 +2687,18 @@ public final class InputLogic {
         return mWordComposer.size();
     }
 
+    public static final int STREAM_PASTE_AUTO_THRESHOLD = 5000;
+
     private void paste(String packageName) {
         // some apps ignore KeyEvent.KEYCODE_PASTE, other apps ignore CRTL+V
         // we try to deal with this by committing the text if the clipboard content is simply text,
         // and use KeyEvent.KEYCODE_PASTE otherwise except for apps that are known to ignore it
         String primaryClip = mLatinIME.getClipboardHistoryManager().getPrimaryClipIfText();
         if (primaryClip != null) {
+            if (primaryClip.length() > STREAM_PASTE_AUTO_THRESHOLD) {
+                mLatinIME.startStreamPasteFromClipboard(primaryClip);
+                return;
+            }
             mConnection.commitText(primaryClip, 1);
             return;
         }

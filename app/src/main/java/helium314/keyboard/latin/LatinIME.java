@@ -78,6 +78,7 @@ import helium314.keyboard.latin.mega.StreamPasteStatusView;
 import helium314.keyboard.latin.touchinputconsumer.GestureConsumer;
 import helium314.keyboard.latin.utils.ColorUtilKt;
 import helium314.keyboard.latin.utils.FloatingKeyboardUtils;
+import helium314.keyboard.latin.utils.ExecutorUtils;
 import helium314.keyboard.latin.utils.FoldableUtils;
 import helium314.keyboard.latin.utils.GestureDataGatheringKt;
 import helium314.keyboard.latin.utils.GestureDataGatheringSettings;
@@ -1457,6 +1458,10 @@ public class LatinIME extends InputMethodService implements
 
     public void onTextInput(@Nullable String rawText) {
         if (rawText == null) return;
+        if (rawText.length() > InputLogic.STREAM_PASTE_AUTO_THRESHOLD) {
+            startStreamPasteFromClipboard(rawText);
+            return;
+        }
         // TODO: have the keyboard pass the correct key code when we need it.
         Event event = Event.createSoftwareTextEvent(rawText, KeyCode.MULTIPLE_CODE_POINTS, null);
         InputTransaction completeInputTransaction = mInputLogic.onTextInput(mSettings.getCurrent(),
@@ -1512,6 +1517,58 @@ public class LatinIME extends InputMethodService implements
     }
 
     public void startStreamPaste() {
+        if (mStreamPasteController == null || mStreamPasteController.isRunning()) return;
+
+        final android.content.ClipboardManager clipboard =
+                (android.content.ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        final android.content.ClipData clipData = clipboard != null ? clipboard.getPrimaryClip() : null;
+        final Long clipTimestamp = clipData != null
+                ? helium314.keyboard.compat.ClipboardManagerCompat.getClipTimestamp(clipData)
+                : null;
+
+        final boolean hasPending = mMegaSharedMemoryManager.hasPendingPayload();
+        final long pendingModified = hasPending ? mMegaSharedMemoryManager.pendingLastModified() : 0L;
+        final boolean shouldStageClipboard = (!hasPending) || (clipTimestamp != null && clipTimestamp > pendingModified);
+
+        if (!shouldStageClipboard) {
+            startStreamPasteInternal();
+            return;
+        }
+
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() -> {
+            final boolean staged = mMegaSharedMemoryManager.stageFromClipboard();
+            mHandler.post(() -> {
+                if (!staged && !mMegaSharedMemoryManager.hasPendingPayload()) {
+                    Toast.makeText(this, R.string.stream_paste_no_pending, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                startStreamPasteInternal();
+            });
+        });
+    }
+
+    public void startStreamPasteFromClipboard(final CharSequence text) {
+        if (mStreamPasteController == null || mStreamPasteController.isRunning() || text == null || text.length() == 0) return;
+
+        ExecutorUtils.getBackgroundExecutor(ExecutorUtils.KEYBOARD).execute(() -> {
+            try {
+                mMegaSharedMemoryManager.stageText(text);
+            } catch (java.io.IOException e) {
+                Log.e(TAG, "Failed to stage clipboard text for stream paste", e);
+                mHandler.post(() -> Toast.makeText(this, R.string.stream_paste_import_error, Toast.LENGTH_SHORT).show());
+                return;
+            }
+            mHandler.post(() -> {
+                if (!mMegaSharedMemoryManager.hasPendingPayload()) {
+                    Toast.makeText(this, R.string.stream_paste_no_pending, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                startStreamPasteInternal();
+            });
+        });
+    }
+
+    private void startStreamPasteInternal() {
         if (mStreamPasteController == null || mStreamPasteController.isRunning()) return;
         final android.os.ParcelFileDescriptor descriptor = mMegaSharedMemoryManager.openPending();
         if (descriptor == null) {
